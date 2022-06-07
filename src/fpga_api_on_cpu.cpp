@@ -110,6 +110,10 @@ const float* FPGA::blockMV()
 
   return data_;    
 }
+
+// weight_mat: (num_output * num_input)
+// input_mat:  (num_input * num_matrix2)
+// result:     (num_output * num_matrix2)
 void FPGA::largeMM(const float* weight_mat, const float* input_mat, float* output, int num_input, int num_output, int num_matrix2)
 {
   float* m1 = this->matrix_M1();
@@ -166,39 +170,41 @@ void FPGA::largeMM(const float* weight_mat, const float* input_mat, float* outpu
   } 
 }
 
-void FPGA::largeMV(const float* large_mat, const float* input, float* output, int num_input, int num_output) {
+void FPGA::largeMV(const float* large_mat, const float* input, float* output, int num_input, int num_output)
+{
   float* vec = this->vector();
   float* mat = this->matrix();
+
   // 0) Initialize output vector		
   for(int i = 0; i < num_output; ++i)
     output[i] = 0;
 
-	for(int i = 0; i < num_output; i += m_size_) {
-		for(int j = 0; j < num_input; j += v_size_) {			
-			// 0) Initialize input vector		
-			int block_row = min(m_size_, num_output-i);
-			int block_col = min(v_size_, num_input-j);
+  for(int i = 0; i < num_output; i += m_size_)
+  {
+    for(int j = 0; j < num_input; j += v_size_)
+    {			
+      // 0) Initialize input vector
+      int block_row = min(m_size_, num_output-i);
+      int block_col = min(v_size_, num_input-j);
 
-			// !) Assign a vector
+      // 1) Assign a vector
 			for (int x = block_col; x < v_size_; x++)
 				vec[x] = 0;
 			memcpy(vec, input + j, block_col * sizeof(float));
 
-			// 2) Assign a matrix
+      // 2) Assign a matrix
 			for (int k = 0; k < block_row; k++)
 				memcpy(mat + v_size_ * k, large_mat + (i + k) * num_input + j, block_col * sizeof(float));
 
-			// 3) Call a function `block_call() to execute MV multiplication
-			const float* ret = this->blockMV();
+      // 3) Call a function `blockMV() to execute MV multiplication
+      const float* ret = this->blockMV();
 
-			// 4) Accumulate intermediate results
-			for(int row = 0; row < block_row; ++row) {
-				output[i + row] += ret[row];
-			}
-		} 
-	}
+      // 4) Accumulate intermediate results
+      for(int row = 0; row < block_row; ++row)
+        output[i + row] += ret[row];
+    } 
+  }
 }
-
 
 void FPGA::convLowering(const std::vector<std::vector<std::vector<std::vector<float>>>>& cnn_weights,
     std::vector<std::vector<float>>& new_weights,
@@ -239,5 +245,3 @@ void FPGA::convLowering(const std::vector<std::vector<std::vector<std::vector<fl
       
 
 }
-
-
