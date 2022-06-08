@@ -147,7 +147,7 @@ void FPGA::largeMM(const float* weight_mat, const float* input_mat, float* outpu
   // 0) Initialize output vector		
   for(int i = 0; i < num_output*num_matrix2; ++i)
     output[i] = 0;
-
+  v_size_=8;
   for(int i = 0; i < num_output; i += v_size_)
   {
     for(int j = 0; j < num_input; j += v_size_)
@@ -187,7 +187,7 @@ void FPGA::largeMM(const float* weight_mat, const float* input_mat, float* outpu
         {
           for(int m = 0; m<block_col_2; ++m)
           {
-            output[(i + n) + (k + m)*num_output] += ret[n*v_size_ + m];
+            output[(i + n) + (k + m)*num_output] += ret[n*v_size_ + m+128];
           }
         }
       }
